@@ -468,6 +468,10 @@ static inline void get_data()
 	if((fifo_write_ctr<fifo_read_ctr&&(flags_global_mc&WRITE_CTR_UNDER_READ_CTR)&&(!(flags_global_mc&FIRST_MOVE_IN_PROCESS)))||(fifo_write_ctr>fifo_read_ctr)){
 
 		switch(CAN1->sFIFOMailBox->RIR){	//look up identifier of mailbox
+			case CAN_ID_STOP_PROGRAM:
+				CAN1->RF0R|=CAN_RF0R_RFOM0;
+				commands |= RESET_MICROCONTROLLER;
+				return;
 			case MC_DATA_PART_1_ID:	handle_mc_data_part_1();
 									return;
 
@@ -550,19 +554,24 @@ static inline void get_data()
 			case CAN_ID_GET_Z_POSITION_REQUEST: 	commands|=Z_POSITION_REQUEST_FLAG;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
+			/*
 			case CAN_ID_B_POSITION_REQUEST: 	commands|=B_POSITION_REQUEST_FLAG;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
 			case CAN_ID_C_POSITION_REQUEST: 	commands|=C_POSITION_REQUEST_FLAG;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
+			*/
 			case CAN_ID_GO_TO_MACHINE_ZERO:	commands|=GO_TO_HOME;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
 			case CAN_ID_HOMING_CYCLE:		commands|=HOMING_CYCLE_FLAG;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
-			case CAN_ID_MEASURE_TOOL:		commands|=MEASURE_TOOL_FLAG;
+			case CAN_ID_MEASURE_WCS_TOOL: commands|=MEASURE_WCS_TOOL_FLAG;
+								CAN1->RF0R|=CAN_RF0R_RFOM0;
+								return;
+			case CAN_ID_MEASURE_ACTUAL_TOOL: commands|=MEASURE_ACTUAL_TOOL_FLAG;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
 			default:				return;
@@ -671,11 +680,24 @@ static inline void send_data()
 	if(delay_ctr>=10){
 		delay_ctr=0;
 		switch(++counter){
+		/*
 		case 1:
 			send_position_message(x_data.step_count,y_data.step_count,MC_DATA_PART_1_ID);
 			break;
 		case 2:
 			send_position_message(z_data.step_count,b_data.step_count,MC_DATA_PART_2_ID);
+			break;
+		case 3:
+			send_position_message(c_data.step_count,n_line_data,MC_DATA_PART_3_ID);
+			counter=0;
+			flags_global_mc&=~DATA_SET_PENDING;
+			break;
+			*/
+		case 1:
+			send_position_message(x_standpoint ,y_standpoint,MC_DATA_PART_1_ID);
+			break;
+		case 2:
+			send_position_message(z_standpoint ,b_data.step_count,MC_DATA_PART_2_ID);
 			break;
 		case 3:
 			send_position_message(c_data.step_count,n_line_data,MC_DATA_PART_3_ID);
@@ -698,6 +720,9 @@ void request_receiving_data()
 		  	  ;
 	  }
 	  */
+
+
+
 	  CAN1->sTxMailBox[0].TDTR=0;
 	  CAN1->sTxMailBox[0].TIR=0;
 	  CAN1->sTxMailBox[0].TIR=CONTINUE_RECEIVING_DATA_IDENTIFIER;
@@ -795,9 +820,6 @@ static inline void check_target_reached_c()
 	return ;
 }
 
-
-
-
 static inline void prepare_next_move()
 {
 	beginning:
@@ -816,7 +838,7 @@ static inline void prepare_next_move()
 	*/
 
 	store_data();
-	send_data();
+	//send_data();
 
 	//send_position_message(fifo_buffer[fifo_read_ctr].mc_data_part_3_HIGH,CAN_ID_GET_X_POSITION_ANSWER); //that was for debugging
 	if(fifo_buffer[fifo_read_ctr].flags&(1<<FILE_END_BIT)){
@@ -872,10 +894,10 @@ static int set_timer_speeds()
 	motor_c_direction=0;
 
 	if(real_line==0){
-		if(b_target > 0)
-			b_target -= 6400;
-		if(c_target > 0)
-			c_target -= 6400;
+		//if(b_target > 0)
+			//b_target -= 6400;
+		//if(c_target > 0)
+			//c_target -= 6400;
 		int b_move=b_target-b_standpoint_previous;
 		int c_move=c_target-c_standpoint_previous;
 		if(b_move||c_move){
@@ -898,9 +920,9 @@ static int set_timer_speeds()
 				}
 			}
 			TIM3->ARR=65000;//just determine a slow speed
-			TIM3->PSC=1;
+			TIM3->PSC=4;
 			TIM4->ARR=65000;
-			TIM4->PSC=1;
+			TIM4->PSC=4;
 			return 0;
 		}
 		return 1;
@@ -1166,7 +1188,6 @@ static inline void save_targets()
 
 static inline void manual_motor_controll()
 {
-
 	if(flags_global_mc&X_MANUAL_MOVE)
 		toggle_pin_x_axis();
 	else if(flags_global_mc&Y_MANUAL_MOVE)
@@ -1203,9 +1224,16 @@ static inline void toggle_pin_x_axis()
 		}
 	}
 	if(x_standpoint==x_target){
+		//send_data();
 		manual_timer_stop();
 		manual_compare_disable();
 		flags_global_mc&=~X_MANUAL_MOVE;
+	}
+	static int delay_ctr = 0;
+	delay_ctr++;
+	if(delay_ctr == 40){
+		delay_ctr = 0;
+		//send_data();
 	}
 }
 
@@ -1233,8 +1261,15 @@ static inline void toggle_pin_y_axis()
 	}
 
 	if(y_standpoint==y_target){
+		//send_data();
 		manual_timer_stop();
 		flags_global_mc&=~Y_MANUAL_MOVE;
+	}
+	static int delay_ctr = 0;
+	delay_ctr++;
+	if(delay_ctr == 40){
+		delay_ctr = 0;
+		//send_data();
 	}
 }
 
@@ -1260,13 +1295,13 @@ static inline void toggle_pin_z_axis()
 			}
 		}
 	}
-	if(commands&MEASURE_TOOL_FLAG){
+	if(commands & MEASURE_WCS_TOOL_FLAG || commands & MEASURE_ACTUAL_TOOL_FLAG){
 		if(z_standpoint==-166400)
 			TIM13->ARR=SPEED_2; //that direct change in hardware register, because there is no function for that yet
 		if((GPIOB->IDR&(1<<4))){//if the endswitch of the x_axis is pressed
 			wait();
 			if((GPIOB->IDR&(1<<4))){
-				if(commands&MEASURE_TOOL_FLAG){
+				if(commands & MEASURE_WCS_TOOL_FLAG || commands & MEASURE_ACTUAL_TOOL_FLAG){
 					flags_global_mc|=MEASURED_TOOL;
 					manual_timer_stop();
 					flags_global_mc&=~Z_MANUAL_MOVE;
@@ -1278,6 +1313,13 @@ static inline void toggle_pin_z_axis()
 	if(z_standpoint==z_target){
 		manual_timer_stop();
 		flags_global_mc&=~Z_MANUAL_MOVE;
+		return;
+	}
+	static int delay_ctr = 0;
+	delay_ctr++;
+	if(delay_ctr == 40){
+		delay_ctr = 0;
+		//send_data();
 	}
 }
 

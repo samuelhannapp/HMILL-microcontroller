@@ -1,6 +1,7 @@
 #ifndef MACROH
 #define MACROH
-#include "C:/Users/Samuel/source/repos/HMILL/communication_protocol.cs"
+//#include "C:/Users/Samuel/source/repos/HMILL/communication_protocol.cs"
+#include "C:/Users/Samuel/Documents/HMILL_gui_cross_platform/communication_protocol.h"
 
 #define DELAY_EXTINT 70
 
@@ -33,8 +34,9 @@
 
 #define SET_X_AXIS_POSITIVE_DIRECTION() {MOTOR_DIRECTION_PORT->BSRR=(1<<0);}
 #define SET_X_AXIS_NEGATIVE_DIRECTION() {MOTOR_DIRECTION_PORT->BSRR=(1<<16);}
-#define SET_Y_AXIS_POSITIVE_DIRECTION() {MOTOR_DIRECTION_PORT->BSRR=(1<<1);}
-#define SET_Y_AXIS_NEGATIVE_DIRECTION() {MOTOR_DIRECTION_PORT->BSRR=(1<<17);}
+//this has to be switched for the big machine...
+#define SET_Y_AXIS_POSITIVE_DIRECTION() {MOTOR_DIRECTION_PORT->BSRR=(1<<17);}
+#define SET_Y_AXIS_NEGATIVE_DIRECTION() {MOTOR_DIRECTION_PORT->BSRR=(1<<1);}
 #define SET_Z_AXIS_POSITIVE_DIRECTION() {MOTOR_DIRECTION_PORT->BSRR=(1<<2);}
 #define SET_Z_AXIS_NEGATIVE_DIRECTION() {MOTOR_DIRECTION_PORT->BSRR=(1<<18);}
 #define SET_B_AXIS_POSITIVE_DIRECTION() {MOTOR_DIRECTION_PORT->BSRR=(1<<3);}
@@ -138,10 +140,11 @@
 #define MOVE_B_NEGATIVE (1<<16)
 #define MOVE_C_POSITIVE (1<<17)
 #define MOVE_C_NEGATIVE (1<<18)
-#define B_POSITION_REQUEST_FLAG (1<<19)
-#define C_POSITION_REQUEST_FLAG (1<<20)
+//#define B_POSITION_REQUEST_FLAG (1<<19)
+//#define C_POSITION_REQUEST_FLAG (1<<20)
 #define START_PROGRAM (1<<11)
-#define MEASURE_TOOL_FLAG (1<<12)
+#define MEASURE_WCS_TOOL_FLAG (1<<12)
+#define MEASURE_ACTUAL_TOOL_FLAG (1<<19)
 #define SEND_DATA_REQUEST_PENDING (1<<13)
 #define RESET_MICROCONTROLLER (1<<14)
 
@@ -255,10 +258,13 @@
 #define CAN_ID_Z_POS_Z_ABS				((uint32_t)(46<<21))
 #define CAN_ID_GCODE_LINE_NR			((uint32_t)(47<<21))
 #define CAN_ID_HOMING_CYCLE				((uint32_t)(HOMING_CYCLE<<21))
-#define CAN_ID_MEASURE_TOOL				((uint32_t)(MEASURE_TOOL<<21))
-#define MEASURE_TOOL_ANSWER_ID			((uint32_t)(MEASURE_TOOL_ANSWER<<21))
+#define CAN_ID_MEASURE_WCS_TOOL			((uint32_t)(MEASURE_WCS_TOOL<<21))
+#define MEASURE_WCS_TOOL_ANSWER_ID		((uint32_t)(MEASURE_WCS_TOOL_ANSWER<<21))
+#define CAN_ID_MEASURE_ACTUAL_TOOL		((uint32_t)(MEASURE_ACTUAL_TOOL<<21))
+#define MEASURE_ACTUAL_TOOL_ANSWER_ID	((uint32_t)(MEASURE_ACTUAL_TOOL_ANSWER<<21))
 #define CAN_ID_PROGRAM_FINISHED			((uint32_t)(PROGRAM_FINISHED<<21))
 #define CAN_ID_START_PROGRAM			((uint32_t)(START_PROGRAM_REQUEST<<21))
+#define CAN_ID_STOP_PROGRAM				((uint32_t)(STOP_PROGRAM_REQUEST<<21))
 
 
 
@@ -269,6 +275,8 @@
 #define CAN_ID_GET_X_POSITION_REQUEST   ((uint32_t)(X_POSITION_REQUEST<<21)) //allways from toolcenter!! offset gets calculated in the computerprogram
 #define CAN_ID_GET_Y_POSITION_REQUEST   ((uint32_t)(Y_POSITION_REQUEST<<21))
 #define CAN_ID_GET_Z_POSITION_REQUEST   ((uint32_t)(Z_POSITION_REQUEST<<21))
+
+#define CAN_ID_MACHINE_HOME ((uint32_t)(MACHINE_HOME<<21))
 /*
 #define CAN_ID_X_Y_POSITION             ((uint32_t)(42<<21))      //first 4 bytes x_standpoint int, second 4 bytes y_standpoint int
 #define CAN_ID_Z_POSITION_GCODE_LINE_NUMBER ((uint32_t)(43<<21))  //first 4 bytes z_standpoint int, second 4 bytes gcode_line number (N-Number) int
@@ -318,11 +326,11 @@
 
 //defines for manual move
 //for now random numbers to test
-#define INCREMENT_1 500
+#define INCREMENT_1 1000
 #define INCREMENT_2 100
 #define INCREMENT_3 20
 
-#define SPEED_1 3000
+#define SPEED_1 2500
 #define SPEED_2 15000
 #define SPEED_3 40000
 #endif

@@ -862,16 +862,15 @@ static void check_command()
 		uint32_t input_nr=(uint32_t)y_standpoint;
 		send_position_message(input_nr,0,CAN_ID_GET_Y_POSITION_ANSWER);
 		commands&=~Y_POSITION_REQUEST_FLAG;
-
 		return;
 	}
 	if(commands&Z_POSITION_REQUEST_FLAG){
 		uint32_t input_nr=(uint32_t)z_standpoint;
 		send_position_message(input_nr,0,CAN_ID_GET_Z_POSITION_ANSWER);
 		commands&=~Z_POSITION_REQUEST_FLAG;
-
 		return;
 	}
+	/*
 	if(commands&B_POSITION_REQUEST_FLAG){
 		uint32_t input_nr=(uint32_t)b_standpoint;
 		send_position_message(input_nr,0,CAN_ID_B_POSITION_ANSWER);
@@ -886,6 +885,7 @@ static void check_command()
 
 		return;
 	}
+	*/
 
 
 	if(!NO_ACTIVE_MOVE)	//that can also be switched on when a programm is runnung
@@ -896,7 +896,11 @@ static void check_command()
 	}
 
 	//that has to be done from the home_position after the machine was homed
-	if(commands&MEASURE_TOOL_FLAG){
+	if(commands&MEASURE_WCS_TOOL_FLAG){
+		measure_tool();
+		return;
+	}
+	if(commands&MEASURE_ACTUAL_TOOL_FLAG){
 		measure_tool();
 		return;
 	}
@@ -1094,7 +1098,7 @@ static void move_axis(int32_t increment,int32_t direction,char axis)
 	}
 	else
 		TIM13->PSC=1;
-	TIM13->ARR=SPEED_1;
+	TIM13->ARR=timer_speed;
 	//x_compare_enable();
 	manual_compare_enable();
 	manual_timer_start();
@@ -1136,7 +1140,10 @@ void go_to_home_position()
 	else if(y_standpoint<0)
 		move_axis(MOVE_TO_ZERO,POSITIVE,'y');
 
-	else commands&=~GO_TO_HOME;
+	else{
+		commands&=~GO_TO_HOME;
+		send_position_message(0,0,CAN_ID_MACHINE_HOME);
+	}
 
 	return;
 }
@@ -1148,7 +1155,7 @@ static void homing_cycle(){
 	else if(!(flags_global_mc&X_HOMED))
 		move_axis(1000000,NEGATIVE,'x');
 	else if(!(flags_global_mc&Y_HOMED))
-		move_axis(1000000,POSITIVE,'y');
+		move_axis(1000000,NEGATIVE,'y');
 	else{
 		commands&=~HOMING_CYCLE_FLAG;
 		flags_global_mc&=~Z_HOMED;
@@ -1166,7 +1173,7 @@ static void homing_cycle(){
 		//There has to be a figured out a good place to move after the homing cycle so that the axis are not
 		//at the endswitches anymore
 		x_standpoint=-6400;//it woudl move a bit to the right in case of go to home
-		y_standpoint=6400;
+		y_standpoint=-6400;//this has to change for axis direction change...
 		z_standpoint=6400;
 		//after that go to home
 		commands|=GO_TO_HOME;//move all axis to 0
@@ -1187,9 +1194,13 @@ static void measure_tool()
 		move_axis(1000000,NEGATIVE,'z');
 	else if(flags_global_mc&MEASURED_TOOL){
 		uint32_t input_nr=(uint32_t)z_standpoint;//if this number is -1(should not happen, than the value of the input_nr will be 0xffffffff) thats a problem, its oviously not because in the gui there is still the right value...
-		send_position_message(input_nr,0,MEASURE_TOOL_ANSWER_ID);
+		if(commands & MEASURE_WCS_TOOL_FLAG)
+			send_position_message(input_nr,0,MEASURE_WCS_TOOL_ANSWER_ID);\
+		if(commands & MEASURE_ACTUAL_TOOL_FLAG)
+			send_position_message(input_nr,0,MEASURE_ACTUAL_TOOL_ANSWER_ID);
 		flags_global_mc&=~MEASURED_TOOL;
-		commands&=~MEASURE_TOOL_FLAG;
+		commands&=~MEASURE_WCS_TOOL_FLAG;
+		commands&=~MEASURE_ACTUAL_TOOL_FLAG;
 		timer_speed=SPEED_1;
 		commands|=GO_TO_HOME;//move all axis to 0
 	}

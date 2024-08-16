@@ -28,7 +28,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  ../Core/Inc/macros.h \
- C:/Users/Samuel/source/repos/HMILL/communication_protocol.cs \
+ C:/Users/Samuel/Documents/HMILL_gui_cross_platform/communication_protocol.h \
  C:/Users/Samuel/source/repos/motion_planner_oop/oop_test/microcontroller_data_set.h \
  ../Core/Inc/macros.h ../Core/Inc/structs.h
 ../Core/Inc/main.h:
@@ -61,7 +61,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h:
 ../Core/Inc/macros.h:
-C:/Users/Samuel/source/repos/HMILL/communication_protocol.cs:
+C:/Users/Samuel/Documents/HMILL_gui_cross_platform/communication_protocol.h:
 C:/Users/Samuel/source/repos/motion_planner_oop/oop_test/microcontroller_data_set.h:
 ../Core/Inc/macros.h:
 ../Core/Inc/structs.h:
