@@ -101,6 +101,8 @@ static inline void toggle_pin_y_axis(void);
 static inline void toggle_pin_z_axis(void);
 static inline void toggle_pin_b_axis(void);
 static inline void toggle_pin_c_axis(void);
+static inline void toggle_pin_y_left_axis();
+static inline void toggle_pin_y_right_axis();
 
 static inline void handle_mc_data_part_1();
 static inline void handle_mc_data_part_2();
@@ -150,12 +152,16 @@ extern volatile int32_t y_target;
 extern volatile int32_t z_target;
 extern volatile int32_t b_target;
 extern volatile int32_t c_target;
+extern volatile int32_t y_target_left;
+extern volatile int32_t y_target_right;
 
 extern volatile int32_t x_standpoint;
 extern volatile int32_t y_standpoint;
 extern volatile int32_t z_standpoint;
 extern volatile int32_t b_standpoint;
 extern volatile int32_t c_standpoint;
+extern volatile int32_t y_standpoint_left;
+extern volatile int32_t y_standpoint_right;
 extern volatile uint32_t n_line_data;
 
 extern volatile struct axis_data x_data;
@@ -470,7 +476,7 @@ static inline void get_data()
 		switch(CAN1->sFIFOMailBox->RIR){	//look up identifier of mailbox
 			case CAN_ID_STOP_PROGRAM:
 				CAN1->RF0R|=CAN_RF0R_RFOM0;
-				commands |= RESET_MICROCONTROLLER;
+				commands |= RESET_MICROCONTROLLER_COMMAND;
 				return;
 			case MC_DATA_PART_1_ID:	handle_mc_data_part_1();
 									return;
@@ -486,34 +492,46 @@ static inline void get_data()
 									handle_mc_data_part_4();
 									return;
 
-			case CAN_ID_MOVE_X_POS: commands|=MOVE_X_POSITIVE;
+			case CAN_ID_MOVE_X_POS: commands|=MOVE_X_POSITIVE_COMMAND;
 						CAN1->RF0R|=CAN_RF0R_RFOM0;
 						return;
-			case CAN_ID_MOVE_X_NEG: commands|=MOVE_X_NEGATIVE;
+			case CAN_ID_MOVE_X_NEG: commands|=MOVE_X_NEGATIVE_COMMAND;
 						CAN1->RF0R|=CAN_RF0R_RFOM0;
 						return;
-			case CAN_ID_MOVE_Y_POS: commands|=MOVE_Y_POSITIVE;
+			case CAN_ID_MOVE_Y_POS: commands|=MOVE_Y_POSITIVE_COMMAND;
 						CAN1->RF0R|=CAN_RF0R_RFOM0;
 						return;
-			case CAN_ID_MOVE_Y_NEG: commands|=MOVE_Y_NEGATIVE;
+			case CAN_ID_MOVE_Y_NEG: commands|=MOVE_Y_NEGATIVE_COMMAND;
 						CAN1->RF0R|=CAN_RF0R_RFOM0;
 						return;
-			case CAN_ID_MOVE_Z_POS: commands|=MOVE_Z_POSITIVE;
+			case CAN_ID_MOVE_Z_POS: commands|=MOVE_Z_POSITIVE_COMMAND;
 						CAN1->RF0R|=CAN_RF0R_RFOM0;
 						return;
-			case CAN_ID_MOVE_Z_NEG: commands|=MOVE_Z_NEGATIVE;
+			case CAN_ID_MOVE_Z_NEG: commands|=MOVE_Z_NEGATIVE_COMMAND;
 						CAN1->RF0R|=CAN_RF0R_RFOM0;
 						return;
-			case CAN_ID_MOVE_B_POS: commands|=MOVE_B_POSITIVE;
+			case CAN_ID_MOVE_B_POS: commands|=MOVE_B_POSITIVE_COMMAND;
 						CAN1->RF0R|=CAN_RF0R_RFOM0;
 						return;
-			case CAN_ID_MOVE_B_NEG: commands|=MOVE_B_NEGATIVE;
+			case CAN_ID_MOVE_B_NEG: commands|=MOVE_B_NEGATIVE_COMMAND;
 						CAN1->RF0R|=CAN_RF0R_RFOM0;
 						return;
-			case CAN_ID_MOVE_C_POS: commands|=MOVE_C_POSITIVE;
+			case CAN_ID_MOVE_C_POS: commands|=MOVE_C_POSITIVE_COMMAND;
 						CAN1->RF0R|=CAN_RF0R_RFOM0;
 						return;
-			case CAN_ID_MOVE_C_NEG: commands|=MOVE_C_NEGATIVE;
+			case CAN_ID_MOVE_C_NEG: commands|=MOVE_C_NEGATIVE_COMMAND;
+						CAN1->RF0R|=CAN_RF0R_RFOM0;
+						return;
+			case CAN_ID_MOVE_Y_LEFT_POS: commands|=MOVE_Y_LEFT_POS_COMMAND;
+						CAN1->RF0R|=CAN_RF0R_RFOM0;
+						return;
+			case CAN_ID_MOVE_Y_LEFT_NEG: commands|=MOVE_Y_LEFT_NEG_COMMAND;
+						CAN1->RF0R|=CAN_RF0R_RFOM0;
+						return;
+			case CAN_ID_MOVE_Y_RIGHT_POS: commands|=MOVE_Y_RIGHT_POS_COMMAND;
+						CAN1->RF0R|=CAN_RF0R_RFOM0;
+						return;
+			case CAN_ID_MOVE_Y_RIGHT_NEG: commands|=MOVE_Y_RIGHT_NEG_COMMAND;
 						CAN1->RF0R|=CAN_RF0R_RFOM0;
 						return;
 			case CAN_ID_MOVE_SPEED_1: 	timer_speed=SPEED_1;
@@ -530,7 +548,7 @@ static inline void get_data()
 							return;
 			case CAN_ID_START_PROGRAM:
 							if(!(flags_global_mc&PROGRAM_RUNNING))
-								commands|=START_PROGRAM;
+								commands|=START_PROGRAM_COMMAND;
 							CAN1->RF0R|=CAN_RF0R_RFOM0;
 							return;
 
@@ -545,13 +563,13 @@ static inline void get_data()
 							CAN1->RF0R|=CAN_RF0R_RFOM0;
 							return;
 							*/
-			case CAN_ID_GET_X_POSITION_REQUEST: 	commands|=X_POSITION_REQUEST_FLAG;
+			case CAN_ID_GET_X_POSITION_REQUEST: 	commands|=X_POSITION_REQUEST_COMMAND;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
-			case CAN_ID_GET_Y_POSITION_REQUEST: 	commands|=Y_POSITION_REQUEST_FLAG;
+			case CAN_ID_GET_Y_POSITION_REQUEST: 	commands|=Y_POSITION_REQUEST_COMMAND;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
-			case CAN_ID_GET_Z_POSITION_REQUEST: 	commands|=Z_POSITION_REQUEST_FLAG;
+			case CAN_ID_GET_Z_POSITION_REQUEST: 	commands|=Z_POSITION_REQUEST_COMMAND;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
 			/*
@@ -562,16 +580,19 @@ static inline void get_data()
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
 			*/
-			case CAN_ID_GO_TO_MACHINE_ZERO:	commands|=GO_TO_HOME;
+			case CAN_ID_GO_TO_MACHINE_ZERO:	commands|=GO_TO_HOME_COMMAND;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
-			case CAN_ID_HOMING_CYCLE:		commands|=HOMING_CYCLE_FLAG;
+			case CAN_ID_HOMING_CYCLE:		commands|=HOMING_CYCLE_COMMAND;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
-			case CAN_ID_MEASURE_WCS_TOOL: commands|=MEASURE_WCS_TOOL_FLAG;
+			case CAN_ID_HOMING_CYCLE_SPLIT:	commands|=HOMING_CYCLE_SPLIT_COMMAND;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
-			case CAN_ID_MEASURE_ACTUAL_TOOL: commands|=MEASURE_ACTUAL_TOOL_FLAG;
+			case CAN_ID_MEASURE_WCS_TOOL: commands|=MEASURE_WCS_TOOL_FLAG_COMMAND;
+								CAN1->RF0R|=CAN_RF0R_RFOM0;
+								return;
+			case CAN_ID_MEASURE_ACTUAL_TOOL: commands|=MEASURE_ACTUAL_TOOL_FLAG_COMMAND;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
 			default:				return;
@@ -715,11 +736,12 @@ void request_receiving_data()
 {
 	  //this has to be the Tx Mailbox with the lowest Identifier that it will be transmittet allways first
 	  //Tx mailbox 0 could be used only for urgent messages like this
-	  /*
+		/*
 	  while(!(CAN1->TSR&CAN_TSR_TME0)){
 		  	  ;
 	  }
 	  */
+
 
 
 
@@ -828,7 +850,15 @@ static inline void prepare_next_move()
 	if(fifo_read_ctr>=(FIFO_BUFFER_SIZE-1))
 		fifo_read_ctr=0;
 
-	if((fifo_read_ctr!=0)&&(!(fifo_read_ctr%100))){ //this shoudl come maybe first
+	//lets delete this, let's see...
+	if((!((fifo_write_ctr==0)&&(fifo_read_ctr==0)))&&(!(fifo_read_ctr%100))){ //this shoudl come maybe first
+		//we could here include an request counter,
+		//the sending process on the computer could check,
+		//wether the counter is incrementing always only one,
+		//if the difference of the previous counter would be bigger than -1,
+		//than the process on the computer would know, it missed
+		//one or more requests from the computer...
+		//
 		request_receiving_data();
 	}
 
@@ -837,8 +867,13 @@ static inline void prepare_next_move()
 		stop=1;
 	*/
 
-	store_data();
+	//store_data();
 	//send_data();
+	static int gcode_line_number_temp = 0;
+	if(gcode_line_number != gcode_line_number_temp){
+		send_position_message(0 ,gcode_line_number,MC_DATA_PART_3_ID);
+		gcode_line_number_temp = gcode_line_number;
+	}
 
 	//send_position_message(fifo_buffer[fifo_read_ctr].mc_data_part_3_HIGH,CAN_ID_GET_X_POSITION_ANSWER); //that was for debugging
 	if(fifo_buffer[fifo_read_ctr].flags&(1<<FILE_END_BIT)){
@@ -846,7 +881,7 @@ static inline void prepare_next_move()
 		//flags|=PROGRAM_FINISHED;
 		for(int i=0;i<1000000;i++) //wait to send the message before reseting the microcontroller
 			;
-		commands|=RESET_MICROCONTROLLER;
+		commands|=RESET_MICROCONTROLLER_COMMAND;
 		return;
 	}
 
@@ -1198,6 +1233,11 @@ static inline void manual_motor_controll()
 		toggle_pin_b_axis();
 	else if(flags_global_mc&C_MANUAL_MOVE)
 		toggle_pin_c_axis();
+	//these two are not exclusive...
+	if(flags_global_mc&Y_MANUAL_MOVE_LEFT)
+		toggle_pin_y_left_axis();
+	if(flags_global_mc&Y_MANUAL_MOVE_RIGHT)
+		toggle_pin_y_right_axis();
 }
 
 static inline void toggle_pin_x_axis()
@@ -1212,21 +1252,20 @@ static inline void toggle_pin_x_axis()
 		x_standpoint++;
 	else
 		x_standpoint--;
-	if(commands&HOMING_CYCLE_FLAG){
+	if(commands&HOMING_CYCLE_COMMAND || commands&HOMING_CYCLE_SPLIT_COMMAND){
 		if((GPIOB->IDR&(1<<1))){//if the endswitch of the x_axis is pressed
 			wait();
 			if((GPIOB->IDR&(1<<1))){
 				x_standpoint=x_target;//that will make the motor stop
 				//but it would be not good to stop at a uneven standpointnumber because that would be a half executed step
-				if(commands&HOMING_CYCLE_FLAG)
-					flags_global_mc|=X_HOMED;
+				flags_global_mc|=X_HOMED;
 			}
 		}
 	}
 	if(x_standpoint==x_target){
 		//send_data();
 		manual_timer_stop();
-		manual_compare_disable();
+		//manual_compare_disable(); //why in the world is this here???
 		flags_global_mc&=~X_MANUAL_MOVE;
 	}
 	static int delay_ctr = 0;
@@ -1248,14 +1287,13 @@ static inline void toggle_pin_y_axis()
 		y_standpoint++;
 	else
 		y_standpoint--;
-	if(commands&HOMING_CYCLE_FLAG){
+	if(commands&HOMING_CYCLE_COMMAND){
 		if((GPIOD->IDR&(1<<2))){//if the endswitch of the x_axis is pressed
 			wait();
 			if((GPIOD->IDR&(1<<2))){
 				y_standpoint=y_target;//that will make the motor stop
 				//but it would be not good to stop at a uneven standpointnumber because that would be a half executed step
-				if(commands&HOMING_CYCLE_FLAG)
-					flags_global_mc|=Y_HOMED;
+				flags_global_mc|=Y_HOMED;
 			}
 		}
 	}
@@ -1284,24 +1322,23 @@ static inline void toggle_pin_z_axis()
 		z_standpoint++;
 	else
 		z_standpoint--;
-	if(commands&HOMING_CYCLE_FLAG){
+	if(commands&HOMING_CYCLE_COMMAND || commands&HOMING_CYCLE_SPLIT_COMMAND){
 		if((GPIOB->IDR&(1<<3))){//if the endswitch of the x_axis is pressed
 			wait();
 			if((GPIOB->IDR&(1<<3))){
 				z_standpoint=z_target;//that will make the motor stop
 				//but it would be not good to stop at a uneven standpointnumber because that would be a half executed step
-				if(commands&HOMING_CYCLE_FLAG)
-					flags_global_mc|=Z_HOMED;
+				flags_global_mc|=Z_HOMED;
 			}
 		}
 	}
-	if(commands & MEASURE_WCS_TOOL_FLAG || commands & MEASURE_ACTUAL_TOOL_FLAG){
-		if(z_standpoint==-166400)
+	if(commands & MEASURE_WCS_TOOL_FLAG_COMMAND || commands & MEASURE_ACTUAL_TOOL_FLAG_COMMAND){
+		if(z_standpoint==-332400)
 			TIM13->ARR=SPEED_2; //that direct change in hardware register, because there is no function for that yet
-		if((GPIOB->IDR&(1<<4))){//if the endswitch of the x_axis is pressed
+		if(!(GPIOB->IDR&(1<<2))){//if the endswitch of the x_axis is pressed
 			wait();
-			if((GPIOB->IDR&(1<<4))){
-				if(commands & MEASURE_WCS_TOOL_FLAG || commands & MEASURE_ACTUAL_TOOL_FLAG){
+			if(!(GPIOB->IDR&(1<<2))){
+				if(commands & MEASURE_WCS_TOOL_FLAG_COMMAND || commands & MEASURE_ACTUAL_TOOL_FLAG_COMMAND){
 					flags_global_mc|=MEASURED_TOOL;
 					manual_timer_stop();
 					flags_global_mc&=~Z_MANUAL_MOVE;
@@ -1356,8 +1393,8 @@ static inline void toggle_pin_b_axis()
 
 static inline void toggle_pin_c_axis()
 {
-	if(GPIOB->ODR&GPIO_ODR_OD6)
-		GPIOB->BSRR|=GPIO_BSRR_BR6;
+	if(GPIOB->ODR&GPIO_ODR_OD9)
+		GPIOB->BSRR|=GPIO_BSRR_BR9;
 	else
 		GPIOB->BSRR|=GPIO_BSRR_BS6;
 
@@ -1385,10 +1422,103 @@ static inline void toggle_pin_c_axis()
 	}
 }
 
+static inline void toggle_pin_y_left_axis()
+{
+	if(GPIOB->ODR&GPIO_ODR_OD8)
+		GPIOB->BSRR|=GPIO_BSRR_BR8;
+	else
+		GPIOB->BSRR|=GPIO_BSRR_BS8;
+
+	if(motor_y_direction)
+		y_standpoint_left++;
+	else
+		y_standpoint_left--;
+	//here we need two endswitches
+	if(commands&HOMING_CYCLE_SPLIT_COMMAND){
+	//this is the same endswitch, as in the general y axis...
+		if((GPIOD->IDR&(1<<2))){//if the endswitch of the x_axis is pressed
+		//if((GPIOB->IDR&(1<<10))){//if the endswitch of the x_axis is pressed
+			wait();
+			if((GPIOD->IDR&(1<<2))){
+			//if((GPIOB->IDR&(1<<10))){
+				send_position_message(y_standpoint_left ,0,CAN_ID_Y_LEFT_DIFFERENCE);
+				y_standpoint_left=y_target_left;//that will make the motor stop
+				//but it would be not good to stop at a uneven standpointnumber because that would be a half executed step
+				flags_global_mc&=~Y_MANUAL_MOVE_LEFT;
+				flags_global_mc|=Y_HOMED_LEFT;
+			}
+		}
+	}
+
+	if(y_standpoint_left==y_target_left){
+		//send_data();
+		if((commands & HOMING_CYCLE_SPLIT_COMMAND) && (flags_global_mc&Y_HOMED_LEFT) && (flags_global_mc& Y_HOMED_RIGHT)){
+			manual_timer_stop();
+			flags_global_mc|=Y_HOMED;
+		}
+		else{
+			manual_timer_stop();
+			flags_global_mc&=~Y_MANUAL_MOVE_LEFT;
+		}
+	}
+	static int delay_ctr = 0;
+	delay_ctr++;
+	if(delay_ctr == 40){
+		delay_ctr = 0;
+		//send_data();
+	}
+}
+// we could for example use here the same line for the tool length measurement
+static inline void toggle_pin_y_right_axis()
+{
+	if(GPIOB->ODR&GPIO_ODR_OD11)
+		GPIOB->BSRR|=GPIO_BSRR_BR11;
+	else
+		GPIOB->BSRR|=GPIO_BSRR_BS11;
+
+	if(motor_y_direction)
+		y_standpoint_right++;
+	else
+		y_standpoint_right--;
+	//here we need two endswitches...
+	if(commands & HOMING_CYCLE_SPLIT_COMMAND){
+		if((GPIOB->IDR&(1<<10))){//if the endswitch of the x_axis is pressed
+		//if((GPIOD->IDR&(1<<2))){
+			wait();
+			if((GPIOB->IDR&(1<<10))){
+			//if((GPIOD->IDR&(1<<2))){
+				send_position_message(y_standpoint_right ,0,CAN_ID_Y_RIGHT_DIFFERENCE);
+				y_standpoint_right=y_target_right;//that will make the motor stop
+				flags_global_mc&=~Y_MANUAL_MOVE_RIGHT;
+				//but it would be not good to stop at a uneven standpointnumber because that would be a half executed step
+				flags_global_mc|=Y_HOMED_RIGHT;
+			}
+		}
+	}
+	if(y_standpoint_right==y_target_right){
+		//send_data();
+		if((commands&HOMING_CYCLE_SPLIT_COMMAND) && (flags_global_mc&Y_HOMED_LEFT) && (flags_global_mc&Y_HOMED_RIGHT)){
+			manual_timer_stop();
+			flags_global_mc|=Y_HOMED;
+		}
+		else{
+			manual_timer_stop();
+			flags_global_mc&=~Y_MANUAL_MOVE_RIGHT;
+		}
+	}
+	static int delay_ctr = 0;
+	delay_ctr++;
+	if(delay_ctr == 40){
+		delay_ctr = 0;
+		//send_data();
+	}
+}
+
 static inline void wait()
 {
 	for(int i=0;i<20;i++)
 		;
+	return;
 }
 
 

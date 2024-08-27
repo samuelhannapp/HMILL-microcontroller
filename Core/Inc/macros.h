@@ -94,6 +94,10 @@
 #define PROGRAM_FINISHED_FLAG (1<<1)
 #define B_MANUAL_MOVE (1<<2)
 #define C_MANUAL_MOVE (1<<3)
+#define Y_MANUAL_MOVE_LEFT (1<<4)
+#define Y_MANUAL_MOVE_RIGHT (1<<5)
+#define Y_HOMED_LEFT (1<<6)
+#define Y_HOMED_RIGHT (1<<7)
 #define CAN1_FIFO_OVERRUN ((uint32_t)(1<<10))
 #define WRITE_CTR_UNDER_READ_CTR ((uint32_t)(1<<11))
 #define BUFFER_NOT_EMPTY ((uint32_t)(1<<12))
@@ -110,7 +114,8 @@
 								  //the buffer would be filled again from the fifo_write_ctr=0
 								  //to prevent that there is this flag wich forbids to
 								  // fill the buffer during the initial process of starting the
-								  //first move
+								  //first mo
+
 #define PROGRAM_RUNNING (1<<20)
 #define X_MANUAL_MOVE (1<<21)
 #define Y_MANUAL_MOVE (1<<22)
@@ -124,29 +129,35 @@
 #define MEASURED_TOOL (1<<30)
 #define DATA_SET_PENDING (1<<31)
 
+
+
 //defines for commands
-#define X_POSITION_REQUEST_FLAG (1<<0)
-#define Y_POSITION_REQUEST_FLAG (1<<1)
-#define Z_POSITION_REQUEST_FLAG (1<<2)
-#define GO_TO_HOME (1<<3)		//thats the only way to get away from the endswitches
-#define HOMING_CYCLE_FLAG (1<<4)
-#define MOVE_X_POSITIVE (1<<5)
-#define MOVE_X_NEGATIVE (1<<6)
-#define MOVE_Y_POSITIVE (1<<7)
-#define MOVE_Y_NEGATIVE (1<<8)
-#define MOVE_Z_POSITIVE (1<<9)
-#define MOVE_Z_NEGATIVE (1<<10)
-#define MOVE_B_POSITIVE (1<<15)
-#define MOVE_B_NEGATIVE (1<<16)
-#define MOVE_C_POSITIVE (1<<17)
-#define MOVE_C_NEGATIVE (1<<18)
-//#define B_POSITION_REQUEST_FLAG (1<<19)
-//#define C_POSITION_REQUEST_FLAG (1<<20)
-#define START_PROGRAM (1<<11)
-#define MEASURE_WCS_TOOL_FLAG (1<<12)
-#define MEASURE_ACTUAL_TOOL_FLAG (1<<19)
-#define SEND_DATA_REQUEST_PENDING (1<<13)
-#define RESET_MICROCONTROLLER (1<<14)
+#define X_POSITION_REQUEST_COMMAND (1<<0)
+#define Y_POSITION_REQUEST_COMMAND (1<<1)
+#define Z_POSITION_REQUEST_COMMAND (1<<2)
+#define GO_TO_HOME_COMMAND (1<<3)		//thats the only way to get away from the endswitches
+#define HOMING_CYCLE_COMMAND (1<<4)
+#define MOVE_X_POSITIVE_COMMAND (1<<5)
+#define MOVE_X_NEGATIVE_COMMAND (1<<6)
+#define MOVE_Y_POSITIVE_COMMAND (1<<7)
+#define MOVE_Y_NEGATIVE_COMMAND (1<<8)
+#define MOVE_Z_POSITIVE_COMMAND (1<<9)
+#define MOVE_Z_NEGATIVE_COMMAND (1<<10)
+#define MOVE_B_POSITIVE_COMMAND (1<<15)
+#define MOVE_B_NEGATIVE_COMMAND (1<<16)
+#define MOVE_C_POSITIVE_COMMAND (1<<17)
+#define MOVE_C_NEGATIVE_COMMAND (1<<18)
+#define START_PROGRAM_COMMAND (1<<11)
+#define MEASURE_WCS_TOOL_FLAG_COMMAND (1<<12)
+#define MEASURE_ACTUAL_TOOL_FLAG_COMMAND (1<<19)
+#define SEND_DATA_REQUEST_PENDING_COMMAND (1<<13)
+#define RESET_MICROCONTROLLER_COMMAND (1<<14)
+#define MOVE_Y_LEFT_POS_COMMAND (1<<20)
+#define MOVE_Y_LEFT_NEG_COMMAND (1<<21)
+#define MOVE_Y_RIGHT_POS_COMMAND (1<<22)
+#define MOVE_Y_RIGHT_NEG_COMMAND (1<<23)
+#define HOMING_CYCLE_SPLIT_COMMAND (1<<24)
+#define GO_TO_HOME_SPLIT_COMMAND (1<<25)
 
 
 //defines for direction plus or minus
@@ -213,6 +224,7 @@
 */
 
 //new version
+//defines for messages
 #define MC_DATA_PART_1_ID ((uint32_t)(MC_DATA_PART_1<<21))
 #define MC_DATA_PART_2_ID ((uint32_t)(MC_DATA_PART_2<<21))
 #define MC_DATA_PART_3_ID ((uint32_t)(MC_DATA_PART_3<<21))
@@ -226,6 +238,10 @@
 #define CAN_ID_MOVE_X_POS       ((uint32_t)(MOVE_X_POS<<21))
 #define CAN_ID_MOVE_X_NEG       ((uint32_t)(MOVE_X_NEG<<21))
 #define CAN_ID_MOVE_Y_POS       ((uint32_t)(MOVE_Y_POS<<21))
+#define CAN_ID_MOVE_Y_LEFT_POS 	((uint32_t)(MOVE_Y_LEFT_POS<<21))
+#define CAN_ID_MOVE_Y_LEFT_NEG 	((uint32_t)(MOVE_Y_LEFT_NEG<<21))
+#define CAN_ID_MOVE_Y_RIGHT_POS	((uint32_t)(MOVE_Y_RIGHT_POS<<21))
+#define CAN_ID_MOVE_Y_RIGHT_NEG	((uint32_t)(MOVE_Y_RIGHT_NEG<<21))
 #define CAN_ID_MOVE_Y_NEG       ((uint32_t)(MOVE_Y_NEG<<21))
 #define CAN_ID_MOVE_Z_POS       ((uint32_t)(MOVE_Z_POS<<21))
 #define CAN_ID_MOVE_Z_NEG       ((uint32_t)(MOVE_Z_NEG<<21))
@@ -241,6 +257,8 @@
 #define CAN_ID_MOVE_SPEED_1     ((uint32_t)(STEP1<<21))
 #define CAN_ID_MOVE_SPEED_2     ((uint32_t)(STEP50<<21))
 #define CAN_ID_MOVE_SPEED_3     ((uint32_t)(STEP1000<<21))
+#define CAN_ID_Y_LEFT_DIFFERENCE  ((uint32_t)(Y_LEFT_DIFFERENCE<<21))
+#define CAN_ID_Y_RIGHT_DIFFERENCE  ((uint32_t)(Y_RIGHT_DIFFERENCE<<21))
 /*
 #define CAN_ID_MOVE_INCREMENT_1 ((uint32_t)(29<<21))
 #define CAN_ID_MOVE_INCREMENT_2 ((uint32_t)(30<<21))
@@ -258,6 +276,7 @@
 #define CAN_ID_Z_POS_Z_ABS				((uint32_t)(46<<21))
 #define CAN_ID_GCODE_LINE_NR			((uint32_t)(47<<21))
 #define CAN_ID_HOMING_CYCLE				((uint32_t)(HOMING_CYCLE<<21))
+#define CAN_ID_HOMING_CYCLE_SPLIT     	((uint32_t)(HOMING_CYCLE_SPLIT<<21))
 #define CAN_ID_MEASURE_WCS_TOOL			((uint32_t)(MEASURE_WCS_TOOL<<21))
 #define MEASURE_WCS_TOOL_ANSWER_ID		((uint32_t)(MEASURE_WCS_TOOL_ANSWER<<21))
 #define CAN_ID_MEASURE_ACTUAL_TOOL		((uint32_t)(MEASURE_ACTUAL_TOOL<<21))
@@ -313,6 +332,7 @@
 #define ALL_MOTORS_STOPPED !motor_start_status
 
 //macro for checking wether no axis is in action
+//the Y_MANUAL_MOVE_LEFT and the others... are not here, because they have to move at the same time...
 #define NO_ACTIVE_MOVE (!(flags_global_mc&(X_MANUAL_MOVE|Y_MANUAL_MOVE|Z_MANUAL_MOVE|B_MANUAL_MOVE|C_MANUAL_MOVE|PROGRAM_RUNNING)))
 
 

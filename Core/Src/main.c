@@ -72,7 +72,7 @@ static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 static void start_first_move();
 static void setup();
-static void go_to_home_position();
+static void go_to_home_position(int split);
 static void start_program();
 static void move_axis(int32_t increment,int32_t direction,char axis);
 static void check_command();
@@ -133,12 +133,17 @@ volatile int32_t y_target=0;
 volatile int32_t z_target=0;
 volatile int32_t b_target=0;
 volatile int32_t c_target=0;
+volatile int32_t y_target_left=0;
+volatile int32_t y_target_right=0;
 
 volatile int32_t x_standpoint=0;
 volatile int32_t y_standpoint=0;
 volatile int32_t z_standpoint=0;
 volatile int32_t b_standpoint=0;
 volatile int32_t c_standpoint=0;
+volatile int32_t y_standpoint_left=0;
+volatile int32_t y_standpoint_right=0;
+
 
 volatile uint32_t gcode_line_number=0;
 
@@ -725,7 +730,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_0
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_0|GPIO_PIN_14|GPIO_PIN_15
                           |GPIO_PIN_1, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
@@ -737,7 +742,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : PE2 PE3 PE4 PE0
                            PE1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_0
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_0|GPIO_PIN_14|GPIO_PIN_15
                           |GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -764,11 +769,19 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB1 BOOT1_Pin PB3 PB4 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|BOOT1_Pin|GPIO_PIN_3|GPIO_PIN_4;
+  GPIO_InitStruct.Pin = GPIO_PIN_1|BOOT1_Pin|GPIO_PIN_3|GPIO_PIN_2|GPIO_PIN_10;
+
+
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+/*
+  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_11;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+*/
   /*Configure GPIO pins : LD4_Pin LD3_Pin LD5_Pin LD6_Pin
                            Audio_RST_Pin */
   GPIO_InitStruct.Pin = LD4_Pin|LD3_Pin|LD5_Pin|LD6_Pin
@@ -779,7 +792,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PD2 OTG_FS_OverCurrent_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|OTG_FS_OverCurrent_Pin;
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_6|GPIO_PIN_7|OTG_FS_OverCurrent_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
@@ -799,7 +812,7 @@ static void start_first_move()
 	MX_TIM12_Init();
 	MX_TIM3_Init();
 	MX_TIM4_Init();
-	commands&=~START_PROGRAM;
+	commands&=~START_PROGRAM_COMMAND;
 	flags_global_mc&=~FIRST_MOVE_IN_PROCESS;
 	flags_global_mc|=PROGRAM_RUNNING;
 	flags_global_mc&=~BUFFER_FULL;
@@ -848,26 +861,26 @@ static void check_command()
 	if(!commands)
 		return;
 
-	if(commands&RESET_MICROCONTROLLER)
+	if(commands&RESET_MICROCONTROLLER_COMMAND)
 		NVIC_SystemReset();
 
 	//POSITION STANDPOINT REQUESTS
-	if(commands&X_POSITION_REQUEST_FLAG){
+	if(commands&X_POSITION_REQUEST_COMMAND){
 		uint32_t input_nr=(uint32_t)x_standpoint;
 		send_position_message(input_nr,0,CAN_ID_GET_X_POSITION_ANSWER); //from where the standpoint is should be considered!!
-		commands&=~X_POSITION_REQUEST_FLAG;
+		commands&=~X_POSITION_REQUEST_COMMAND;
 		return;
 	}
-	if(commands&Y_POSITION_REQUEST_FLAG){
+	if(commands&Y_POSITION_REQUEST_COMMAND){
 		uint32_t input_nr=(uint32_t)y_standpoint;
 		send_position_message(input_nr,0,CAN_ID_GET_Y_POSITION_ANSWER);
-		commands&=~Y_POSITION_REQUEST_FLAG;
+		commands&=~Y_POSITION_REQUEST_COMMAND;
 		return;
 	}
-	if(commands&Z_POSITION_REQUEST_FLAG){
+	if(commands&Z_POSITION_REQUEST_COMMAND){
 		uint32_t input_nr=(uint32_t)z_standpoint;
 		send_position_message(input_nr,0,CAN_ID_GET_Z_POSITION_ANSWER);
-		commands&=~Z_POSITION_REQUEST_FLAG;
+		commands&=~Z_POSITION_REQUEST_COMMAND;
 		return;
 	}
 	/*
@@ -890,73 +903,98 @@ static void check_command()
 
 	if(!NO_ACTIVE_MOVE)	//that can also be switched on when a programm is runnung
 		return;
-	else if(commands&HOMING_CYCLE_FLAG){
+
+	else if(commands&HOMING_CYCLE_COMMAND){
+		homing_cycle();			//thats hardware goes to hardwareswitches
+		return;
+	}
+	else if(commands&HOMING_CYCLE_SPLIT_COMMAND){
 		homing_cycle();			//thats hardware goes to hardwareswitches
 		return;
 	}
 
 	//that has to be done from the home_position after the machine was homed
-	if(commands&MEASURE_WCS_TOOL_FLAG){
+	if(commands&MEASURE_WCS_TOOL_FLAG_COMMAND){
 		measure_tool();
 		return;
 	}
-	if(commands&MEASURE_ACTUAL_TOOL_FLAG){
+	if(commands&MEASURE_ACTUAL_TOOL_FLAG_COMMAND){
 		measure_tool();
 		return;
 	}
 
 	//POSITION MOVE_REQUESTS
-	else if(commands&MOVE_X_POSITIVE){
+	else if(commands&MOVE_X_POSITIVE_COMMAND){
 		move_axis(increment,POSITIVE,'x');
 		return;
 	}
-	else if(commands&MOVE_X_NEGATIVE){
+	else if(commands&MOVE_X_NEGATIVE_COMMAND){
 		move_axis(increment,NEGATIVE,'x');
 		return;
 	}
-	else if(commands&MOVE_Y_POSITIVE){
+	else if(commands&MOVE_Y_POSITIVE_COMMAND){
 		move_axis(increment,POSITIVE,'y');
 		return;
 	}
-	else if(commands&MOVE_Y_NEGATIVE){
+	else if(commands&MOVE_Y_NEGATIVE_COMMAND){
 		move_axis(increment,NEGATIVE,'y');
 		return;
 	}
-	else if(commands&MOVE_Z_POSITIVE){
+	else if(commands&MOVE_Z_POSITIVE_COMMAND){
 		move_axis(increment,POSITIVE,'z');
 		return;
 	}
-	else if(commands&MOVE_Z_NEGATIVE){
+	else if(commands&MOVE_Z_NEGATIVE_COMMAND){
 		move_axis(increment,NEGATIVE,'z');
 		return;
 	}
-	else if(commands&MOVE_B_POSITIVE){
+	else if(commands&MOVE_B_POSITIVE_COMMAND){
 		move_axis(increment,POSITIVE,'b');
 		return;
 	}
-	else if(commands&MOVE_B_NEGATIVE){
+	else if(commands&MOVE_B_NEGATIVE_COMMAND){
 		move_axis(increment,NEGATIVE,'b');
 		return;
 	}
-	else if(commands&MOVE_C_POSITIVE){
+	else if(commands&MOVE_C_POSITIVE_COMMAND){
 		move_axis(increment,POSITIVE,'c');
 		return;
 	}
-	else if(commands&MOVE_C_NEGATIVE){
+	else if(commands&MOVE_C_NEGATIVE_COMMAND){
 		move_axis(increment,NEGATIVE,'c');
+		return;
+	}
+	else if(commands&MOVE_Y_LEFT_POS_COMMAND){
+		move_axis(increment,POSITIVE,'l');
+		return;
+	}
+	else if(commands&MOVE_Y_LEFT_NEG_COMMAND){
+		move_axis(increment,NEGATIVE,'l');
+		return;
+	}
+	else if(commands&MOVE_Y_RIGHT_POS_COMMAND){
+		move_axis(increment,POSITIVE,'r');
+		return;
+	}
+	else if(commands&MOVE_Y_RIGHT_NEG_COMMAND){
+		move_axis(increment,NEGATIVE,'r');
 		return;
 	}
 
 	//HOME REQUESTS
-	if(commands&GO_TO_HOME){
-		go_to_home_position(); //thats software, just goes back to targetxyz 0
+	if(commands&GO_TO_HOME_COMMAND){
+		go_to_home_position(0); //thats software, just goes back to targetxyz 0
+		return;
+	}
+	if(commands&GO_TO_HOME_SPLIT_COMMAND){
+		go_to_home_position(1); //thats software, just goes back to targetxyz 0
 		return;
 	}
 
 
 	//PROGRAM START REQUEST
 
-	else if(commands&START_PROGRAM){
+	else if(commands&START_PROGRAM_COMMAND){
 		if(!(flags_global_mc&BUFFER_FILLING_IN_PROGRESS))
 			start_program();
 		if(flags_global_mc&BUFFER_FULL)
@@ -973,7 +1011,14 @@ static void move_axis(int32_t increment,int32_t direction,char axis)
 	if(!NO_ACTIVE_MOVE)
 		return;
 	//delete all requests
-	commands&=~MOVE_X_POSITIVE&~MOVE_X_NEGATIVE&~MOVE_Y_POSITIVE&~MOVE_Y_NEGATIVE&~MOVE_Z_POSITIVE&~MOVE_Z_NEGATIVE&~MOVE_B_POSITIVE&~MOVE_B_NEGATIVE&~MOVE_C_POSITIVE&~MOVE_C_NEGATIVE;
+	commands&=	~MOVE_X_POSITIVE_COMMAND&~MOVE_X_NEGATIVE_COMMAND&
+				~MOVE_Y_POSITIVE_COMMAND&~MOVE_Y_NEGATIVE_COMMAND&
+				~MOVE_Z_POSITIVE_COMMAND&~MOVE_Z_NEGATIVE_COMMAND&
+				~MOVE_B_POSITIVE_COMMAND&~MOVE_B_NEGATIVE_COMMAND&
+				~MOVE_C_POSITIVE_COMMAND&~MOVE_C_NEGATIVE_COMMAND&
+				~MOVE_Y_LEFT_POS_COMMAND&~MOVE_Y_LEFT_NEG_COMMAND&
+				~MOVE_Y_RIGHT_POS_COMMAND&~MOVE_Y_RIGHT_NEG_COMMAND
+				;
 
 	if(axis=='c'||axis=='b')
 		increment= INCREMENT_3;
@@ -1048,6 +1093,31 @@ static void move_axis(int32_t increment,int32_t direction,char axis)
 					else
 						SET_C_AXIS_NEGATIVE_DIRECTION();
 					break;
+		case 'l':	flags_global_mc|=Y_MANUAL_MOVE_LEFT;
+					if(increment)
+						y_target_left+=increment;
+					else
+						y_target_left=0;
+					motor_y_direction=direction;
+					if(direction){
+						SET_Y_AXIS_POSITIVE_DIRECTION();
+					}
+					else
+						SET_Y_AXIS_NEGATIVE_DIRECTION();
+					break;
+		case 'r':	flags_global_mc|=Y_MANUAL_MOVE_RIGHT;
+					if(increment)
+						y_target_right+=increment;
+					else
+						y_target_right=0;
+					motor_y_direction=direction;
+					if(direction){
+						SET_Y_AXIS_POSITIVE_DIRECTION();
+					}
+					else
+						SET_Y_AXIS_NEGATIVE_DIRECTION();
+					break;
+
 
 		default:	return;
 	}
@@ -1092,6 +1162,27 @@ static void move_axis(int32_t increment,int32_t direction,char axis)
 	gpio_init_5.Speed = GPIO_SPEED_FREQ_LOW;
 	HAL_GPIO_Init(GPIOB, &gpio_init_5);
 
+	//setup for y l axis
+	/*
+	GPIO_InitTypeDef gpio_init_6;
+	gpio_init_6.Pin = GPIO_PIN_10;
+	gpio_init_6.Mode = GPIO_MODE_OUTPUT_PP;
+	gpio_init_6.Pull = GPIO_NOPULL;
+	gpio_init_6.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(GPIOB, &gpio_init_6);
+*/
+	//setup for y r axis
+	//this has to be switched off for not seperate steering...
+	//in other words, for seperate the 11 has to be initialized
+	if(flags_global_mc&Y_MANUAL_MOVE_RIGHT){
+		GPIO_InitTypeDef gpio_init_7;
+		gpio_init_7.Pin = GPIO_PIN_11;
+		gpio_init_7.Mode = GPIO_MODE_OUTPUT_PP;
+		gpio_init_7.Pull = GPIO_NOPULL;
+		gpio_init_7.Speed = GPIO_SPEED_FREQ_LOW;
+		HAL_GPIO_Init(GPIOB, &gpio_init_7);
+	}
+
 	if(axis=='b'||axis=='c'){
 		TIM13->PSC=400;
 
@@ -1121,7 +1212,7 @@ static void start_program()
 
 //this should be not neccesary anymore because to go every time to the end switches would be much better
 
-void go_to_home_position()
+void go_to_home_position(int split)
 {
 	//first home the z axis, else you could drive into the workpiece
 
@@ -1129,21 +1220,32 @@ void go_to_home_position()
 		move_axis(MOVE_TO_ZERO,NEGATIVE,'z');
 	else if(z_standpoint<0)
 		move_axis(MOVE_TO_ZERO,POSITIVE,'z');
-
 	else if(x_standpoint>0)
 		move_axis(MOVE_TO_ZERO,NEGATIVE,'x');
 	else if(x_standpoint<0)
 		move_axis(MOVE_TO_ZERO,POSITIVE,'x');
-	
-	else if(y_standpoint>0)
-		move_axis(MOVE_TO_ZERO,NEGATIVE,'y');
-	else if(y_standpoint<0)
-		move_axis(MOVE_TO_ZERO,POSITIVE,'y');
-
-	else{
-		commands&=~GO_TO_HOME;
-		send_position_message(0,0,CAN_ID_MACHINE_HOME);
+	else if(split == 1){
+		if(y_standpoint_left>0)
+			move_axis(MOVE_TO_ZERO,NEGATIVE,'l');
+		if(y_standpoint_left<0)
+			move_axis(MOVE_TO_ZERO,POSITIVE,'l');
+		if(y_standpoint_right>0)
+			move_axis(MOVE_TO_ZERO,NEGATIVE,'r');
+		if(y_standpoint_right<0)
+			move_axis(MOVE_TO_ZERO,POSITIVE,'r');
 	}
+	else if(split == 0){
+		if(y_standpoint>0)
+			move_axis(MOVE_TO_ZERO,NEGATIVE,'y');
+		if(y_standpoint<0)
+			move_axis(MOVE_TO_ZERO,POSITIVE,'y');
+		else{
+			commands&=~GO_TO_HOME_COMMAND;
+			send_position_message(0,0,CAN_ID_MACHINE_HOME);
+		}
+	}
+
+
 
 	return;
 }
@@ -1154,14 +1256,25 @@ static void homing_cycle(){
 		move_axis(1000000,POSITIVE,'z');
 	else if(!(flags_global_mc&X_HOMED))
 		move_axis(1000000,NEGATIVE,'x');
-	else if(!(flags_global_mc&Y_HOMED))
-		move_axis(1000000,NEGATIVE,'y');
+	else if(!(flags_global_mc&Y_HOMED)){
+		for(int i = 0; i < 1000; i++)
+			;
+		if(commands&HOMING_CYCLE_SPLIT_COMMAND){
+			if(!(flags_global_mc&Y_HOMED_LEFT))
+				move_axis(1000000,NEGATIVE,'l');
+			if(!(flags_global_mc&Y_HOMED_RIGHT))
+				move_axis(1000000,NEGATIVE,'r');
+		}
+		else if(commands&HOMING_CYCLE_COMMAND)
+			move_axis(1000000,NEGATIVE,'y');
+	}
 	else{
-		commands&=~HOMING_CYCLE_FLAG;
+
 		flags_global_mc&=~Z_HOMED;
 		flags_global_mc&=~X_HOMED;
 		flags_global_mc&=~Y_HOMED;
 		flags_global_mc|=MACHINE_HOMED;
+		//send_position_message(0,0,CAN_ID_MACHINE_HOME);
 		//that would be not good because the home position would mean we are at the endswitches,
 		//witch means we are not allowed to move, that would mean if we would start anything from there,
 		//we would  need again an exeption...
@@ -1173,14 +1286,22 @@ static void homing_cycle(){
 		//There has to be a figured out a good place to move after the homing cycle so that the axis are not
 		//at the endswitches anymore
 		x_standpoint=-6400;//it woudl move a bit to the right in case of go to home
-		y_standpoint=-6400;//this has to change for axis direction change...
 		z_standpoint=6400;
+		if(commands&HOMING_CYCLE_COMMAND)
+			y_standpoint=-6400;//this has to change for axis direction change...
+		if(commands&HOMING_CYCLE_SPLIT_COMMAND){
+		y_standpoint_left = -6400;
+		y_standpoint_right = -6400;
+		}
 		//after that go to home
-		commands|=GO_TO_HOME;//move all axis to 0
+		if(commands&HOMING_CYCLE_COMMAND)
+			commands|=GO_TO_HOME_COMMAND;//move all axis to 0
+		if(commands&HOMING_CYCLE_SPLIT_COMMAND)
+			commands|=GO_TO_HOME_SPLIT_COMMAND;//move all axis to 0
+		commands&=~HOMING_CYCLE_COMMAND;
+		commands&=~HOMING_CYCLE_SPLIT_COMMAND;
 	}
-
 	return;
-
 }
 //homeposition means all axis are at 0, that is slightly besides the endswitches, in order that they are not pressed
 #define MACHINE_AT_HOME_POSITION (x_standpoint==0&&y_standpoint==0&&z_standpoint==0)
@@ -1194,15 +1315,15 @@ static void measure_tool()
 		move_axis(1000000,NEGATIVE,'z');
 	else if(flags_global_mc&MEASURED_TOOL){
 		uint32_t input_nr=(uint32_t)z_standpoint;//if this number is -1(should not happen, than the value of the input_nr will be 0xffffffff) thats a problem, its oviously not because in the gui there is still the right value...
-		if(commands & MEASURE_WCS_TOOL_FLAG)
+		if(commands & MEASURE_WCS_TOOL_FLAG_COMMAND)
 			send_position_message(input_nr,0,MEASURE_WCS_TOOL_ANSWER_ID);\
-		if(commands & MEASURE_ACTUAL_TOOL_FLAG)
+		if(commands & MEASURE_ACTUAL_TOOL_FLAG_COMMAND)
 			send_position_message(input_nr,0,MEASURE_ACTUAL_TOOL_ANSWER_ID);
 		flags_global_mc&=~MEASURED_TOOL;
-		commands&=~MEASURE_WCS_TOOL_FLAG;
-		commands&=~MEASURE_ACTUAL_TOOL_FLAG;
+		commands&=~MEASURE_WCS_TOOL_FLAG_COMMAND;
+		commands&=~MEASURE_ACTUAL_TOOL_FLAG_COMMAND;
 		timer_speed=SPEED_1;
-		commands|=GO_TO_HOME;//move all axis to 0
+		commands|=GO_TO_HOME_COMMAND;//move all axis to 0
 	}
 
 	return;
