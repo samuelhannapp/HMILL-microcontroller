@@ -838,6 +838,8 @@ static void setup()
 
 	flags_global_mc|=WRITE_CTR_UNDER_READ_CTR;
 	flags_global_mc|=FIRST_MOVE;
+	//thats if we don't have endswitches...
+	//flags_global_mc|=MACHINE_HOMED;
 
 	x_interrupt_enable();
 	y_interrupt_enable();

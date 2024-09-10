@@ -637,11 +637,13 @@ static inline void handle_mc_data_part_4()
 	fifo_buffer[fifo_write_ctr].gcode_line=CAN1->sFIFOMailBox->RDHR;	//read high word of can fifo buffer
 	CAN1->RF0R|=CAN_RF0R_RFOM0; 	//acknowlege that message box was empitied;
 	if(++fifo_write_ctr>=FIFO_BUFFER_SIZE){
-		if(fifo_read_ctr>0){
+		//if(fifo_read_ctr>0){
 			fifo_write_ctr=0;
 			//this has to be cleared when the fifo_read_ctr goes to 0
 			flags_global_mc|=WRITE_CTR_UNDER_READ_CTR;
-		}
+		//}
+		//if(fifo_read_ctr == 0)
+			//send_position_message(c_data.step_count,n_line_data,MC_DATA_PART_3_ID);
 		if(flags_global_mc&FIRST_MOVE){
 			flags_global_mc|=BUFFER_FULL;
 			//flags&=~FIRST_MOVE;
@@ -743,12 +745,22 @@ void request_receiving_data()
 	  */
 
 
+		CAN1->sTxMailBox[0].TDTR=(8<<CAN_TDT0R_DLC_Pos); //because its an int32_t... 4 bytes
+		CAN1->sTxMailBox[0].TDLR=fifo_write_ctr;
+		CAN1->sTxMailBox[0].TDHR=fifo_read_ctr;
+		CAN1->sTxMailBox[0].TIR=0;
+		CAN1->sTxMailBox[0].TIR|=CONTINUE_RECEIVING_DATA_IDENTIFIER;
+		CAN1->sTxMailBox[0].TIR|=CAN_TI0R_TXRQ;        //that means start to transmit the message
 
 
-	  CAN1->sTxMailBox[0].TDTR=0;
-	  CAN1->sTxMailBox[0].TIR=0;
-	  CAN1->sTxMailBox[0].TIR=CONTINUE_RECEIVING_DATA_IDENTIFIER;
-	  CAN1->sTxMailBox[0].TIR|=CAN_TI0R_TXRQ;
+
+		//that was the old one
+		/*
+		CAN1->sTxMailBox[0].TDTR=0;
+		CAN1->sTxMailBox[0].TIR=0;
+		CAN1->sTxMailBox[0].TIR=CONTINUE_RECEIVING_DATA_IDENTIFIER;
+		CAN1->sTxMailBox[0].TIR|=CAN_TI0R_TXRQ;
+		*/
 	  return;
 }
 
@@ -862,16 +874,19 @@ static inline void prepare_next_move()
 		request_receiving_data();
 	}
 
-	/*int stop=0;
-	if(fifo_buffer[fifo_read_ctr].mc_data_part_3_HIGH==1692)
-		stop=1;
-	*/
+	//int stop=0;
+	//if(fifo_buffer[fifo_read_ctr].mc_data_part_3_HIGH==1692)
+		//stop=1;
+	//if(fifo_buffer[fifo_read_ctr].mc_data_part_3_HIGH==1692)
 
 	//store_data();
 	//send_data();
+
+	//if(gcode_line_number == 2560)
+		//send_position_message(0 ,gcode_line_number,MC_DATA_PART_3_ID);
 	static int gcode_line_number_temp = 0;
 	if(gcode_line_number != gcode_line_number_temp){
-		send_position_message(0 ,gcode_line_number,MC_DATA_PART_3_ID);
+		//send_position_message(0 ,gcode_line_number,MC_DATA_PART_3_ID);
 		gcode_line_number_temp = gcode_line_number;
 	}
 
