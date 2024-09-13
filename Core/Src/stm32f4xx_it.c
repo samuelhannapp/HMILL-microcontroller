@@ -595,7 +595,8 @@ static inline void get_data()
 			case CAN_ID_MEASURE_ACTUAL_TOOL: commands|=MEASURE_ACTUAL_TOOL_FLAG_COMMAND;
 								CAN1->RF0R|=CAN_RF0R_RFOM0;
 								return;
-			default:				return;
+			default:			CAN1->RF0R|=CAN_RF0R_RFOM0;
+								return;
 		}
 	}
 	else{
@@ -884,11 +885,11 @@ static inline void prepare_next_move()
 
 	//if(gcode_line_number == 2560)
 		//send_position_message(0 ,gcode_line_number,MC_DATA_PART_3_ID);
-	static int gcode_line_number_temp = 0;
-	if(gcode_line_number != gcode_line_number_temp){
+	//static int gcode_line_number_temp = 0;
+	//if(gcode_line_number != gcode_line_number_temp){
 		//send_position_message(0 ,gcode_line_number,MC_DATA_PART_3_ID);
-		gcode_line_number_temp = gcode_line_number;
-	}
+		//gcode_line_number_temp = gcode_line_number;
+	//}
 
 	//send_position_message(fifo_buffer[fifo_read_ctr].mc_data_part_3_HIGH,CAN_ID_GET_X_POSITION_ANSWER); //that was for debugging
 	if(fifo_buffer[fifo_read_ctr].flags&(1<<FILE_END_BIT)){
@@ -1058,30 +1059,41 @@ static int set_timer_speeds()
 	}
 	*/
 
+	if(x_line > 1000 || y_line > 1000)
+		wait();
+
 
 	float x_speed=speed*x_ratio;
 	float y_speed=speed*y_ratio;
 	float z_speed=speed*z_ratio;
 	if(x_speed<65535){
 		TIM9->ARR=x_speed;
-		TIM9->PSC=1;
+		TIM9->PSC=0;
 	}
-	else
+	else if(x_line > 1)
 		calc_prescaler(x_speed,9);
 
 	if(y_speed<65535){
 		TIM10->ARR=y_speed;
-		TIM10->PSC=1;
+		TIM10->PSC=0;
 	}
-	else
+	else if(y_line > 1)
 		calc_prescaler(y_speed,10);
 
 	if(z_speed<65535){
 		TIM11->ARR=z_speed;
-		TIM11->PSC=1;
+		TIM11->PSC=0;
 	}
-	else
+	else if(z_line > 1)
 		calc_prescaler(z_speed,11);
+/*
+	send_position_message(TIM9->ARR * (TIM9->PSC + 1), TIM10->ARR * (TIM10->PSC + 1),CAN_ID_TIMER_SPEED_1);
+	for(int i = 0; i < 10000; i++)
+		wait();
+	send_position_message(x_line, y_line,CAN_ID_TIMER_SPEED_2);
+	for(int i = 0; i < 10000; i++)
+		wait();
+*/
 
 	return 0;
 }
@@ -1107,15 +1119,15 @@ static void calc_prescaler(float frequency,int timer)
 	float timer_value=frequency/prescaler;
 	uint16_t timer_value_int=(int16_t)timer_value;
 	if(timer==9){
-		TIM9->PSC=prescaler;
+		TIM9->PSC=prescaler - 1;
 		TIM9->ARR=timer_value_int;
 	}
 	else if(timer==10){
-		TIM10->PSC=prescaler;
+		TIM10->PSC=prescaler - 1;
 		TIM10->ARR=timer_value_int;
 	}
 	else if(timer==11){
-			TIM11->PSC=prescaler;
+			TIM11->PSC=prescaler - 1;
 			TIM11->ARR=timer_value_int;
 		}
 	return;
@@ -1146,6 +1158,9 @@ static inline void set_directions()
 
 static inline void start_motors()
 {
+	TIM9->CNT = 0;
+	TIM10->CNT = 0;
+	TIM11->CNT = 0;
 	switch(motor_start){
 	 	 case 0b00000111:        xyz_axis_start();break;
 
@@ -1290,6 +1305,7 @@ static inline void toggle_pin_x_axis()
 		//send_data();
 	}
 }
+
 
 static inline void toggle_pin_y_axis()
 {

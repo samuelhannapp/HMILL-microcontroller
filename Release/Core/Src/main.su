@@ -1,0 +1,14 @@
+../Core/Src/main.c:633:13:MX_TIM12_Init	40	static,ignoring_inline_asm
+../Core/Src/main.c:497:13:MX_TIM9_Init	40	static,ignoring_inline_asm
+../Core/Src/main.c:539:13:MX_TIM10_Init	48	static,ignoring_inline_asm
+../Core/Src/main.c:586:13:MX_TIM11_Init	48	static,ignoring_inline_asm
+../Core/Src/main.c:377:13:MX_TIM3_Init	72	static,ignoring_inline_asm
+../Core/Src/main.c:438:13:MX_TIM4_Init	72	static,ignoring_inline_asm
+../Core/Src/main.c:1010:13:move_axis	144	static
+../Core/Src/main.c:1254:13:homing_cycle	8	static
+../Core/Src/main.c:233:6:SystemClock_Config	88	static,ignoring_inline_asm
+../Core/Src/main.c:1335:6:send_position_message	20	static
+../Core/Src/main.c:1310:13:measure_tool	16	static
+../Core/Src/main.c:1216:6:go_to_home_position	8	static
+../Core/Src/main.c:167:5:main	80	static,ignoring_inline_asm
+../Core/Src/main.c:1375:6:Error_Handler	0	static,ignoring_inline_asm

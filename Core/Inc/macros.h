@@ -286,7 +286,6 @@
 #define CAN_ID_STOP_PROGRAM				((uint32_t)(STOP_PROGRAM_REQUEST<<21))
 
 
-
 //definitions for CAN transmit FIFO mailbox identifier register
 //#define STOP_RECEIVING_DATA_IDENTIFIER ((uint32_t)(1<<21))
 #define CONTINUE_RECEIVING_DATA_IDENTIFIER ((uint32_t)(CONTINUE_RECEIVING_DATA<<21))
@@ -296,6 +295,8 @@
 #define CAN_ID_GET_Z_POSITION_REQUEST   ((uint32_t)(Z_POSITION_REQUEST<<21))
 
 #define CAN_ID_MACHINE_HOME ((uint32_t)(MACHINE_HOME<<21))
+#define CAN_ID_TIMER_SPEED_1 ((uint32_t)(TIMER_SPEED_1<<21))
+#define CAN_ID_TIMER_SPEED_2 ((uint32_t)(TIMER_SPEED_2<<21))
 /*
 #define CAN_ID_X_Y_POSITION             ((uint32_t)(42<<21))      //first 4 bytes x_standpoint int, second 4 bytes y_standpoint int
 #define CAN_ID_Z_POSITION_GCODE_LINE_NUMBER ((uint32_t)(43<<21))  //first 4 bytes z_standpoint int, second 4 bytes gcode_line number (N-Number) int

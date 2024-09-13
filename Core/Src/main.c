@@ -204,7 +204,6 @@ int main(void)
   // I changed this on 28.09.2023
   //commands&=~START_PROGRAM;
   flags_global_mc|=MACHINE_HOMED;
-  //flags|=FIRST_MOVE_NO_Z;
 
 
 
