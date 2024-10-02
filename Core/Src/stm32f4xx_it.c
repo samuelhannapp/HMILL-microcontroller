@@ -1228,7 +1228,6 @@ static inline void xyz_axis_start(void){
         z_timer_start();
         motor_start_status=0b00000111;
 }
-
 static inline void b_axis_start(void){
 	b_compare_enable();
 	b_timer_start();
@@ -1240,7 +1239,6 @@ static inline void c_axis_start(void){
 	c_timer_start();
 	motor_start_status=0b00010000;
 }
-
 static inline void save_targets()
 {
 	x_standpoint_previous=x_standpoint;
@@ -1250,7 +1248,6 @@ static inline void save_targets()
 	c_standpoint_previous=c_standpoint;
 	return;
 }
-
 static inline void manual_motor_controll()
 {
 	if(flags_global_mc&X_MANUAL_MOVE)
@@ -1269,7 +1266,6 @@ static inline void manual_motor_controll()
 	if(flags_global_mc&Y_MANUAL_MOVE_RIGHT)
 		toggle_pin_y_right_axis();
 }
-
 static inline void toggle_pin_x_axis()
 {
 

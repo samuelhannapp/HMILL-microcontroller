@@ -110,6 +110,8 @@ volatile uint32_t n_line_data;
 
 volatile uint32_t flags_global_mc=0;
 
+volatile uint32_t acceleration = 0;
+
 //those are only for the manual controll
 volatile uint32_t commands=0;
 volatile uint16_t timer_speed=SPEED_1;
@@ -203,7 +205,7 @@ int main(void)
 
   // I changed this on 28.09.2023
   //commands&=~START_PROGRAM;
-  flags_global_mc|=MACHINE_HOMED;
+  //flags_global_mc|=MACHINE_HOMED;
 
 
 
